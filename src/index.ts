@@ -1,6 +1,5 @@
 import {
     Context,
-    Connector,
     createConnector,
     ConnectorError,
     readConfig,
@@ -21,7 +20,6 @@ import {
     StdAccountUnlockOutput,
     StdAccountUpdateInput,
     StdAccountUpdateOutput,
-    AttributeChangeOp,
     StdTestConnectionOutput,
     StdEntitlementListInput,
     StdEntitlementListOutput,
@@ -41,9 +39,6 @@ export const connector = async () => {
 
     // Use the vendor SDK, or implement own client as necessary, to initialize a client
     const myClient = new MyClient(config)
-//    export const connector: Connector = createConnector()
-
-logger.debug('We are in index.ts')
 
     return createConnector()
         .stdTestConnection(async (context: Context, input: undefined, res: Response<StdTestConnectionOutput>) => {
@@ -51,12 +46,11 @@ logger.debug('We are in index.ts')
             res.send(await myClient.testConnection())
         })
         .stdAccountList(async (context: Context, input: undefined, res: Response<StdAccountListOutput>) => {
-//            const remoteSupport = await myClient.getProduct()
-//            logger.info('index product = '+ remoteSupport)
 
             const accounts = await myClient.getAllAccounts()
             
             for (const account of accounts) {
+                // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
                 if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
                 if(account.private_display_name){res.send(util.userToAccount_rs(account))}
             }
@@ -66,9 +60,9 @@ logger.debug('We are in index.ts')
         .stdAccountRead(async (context: Context, input: StdAccountReadInput, res: Response<StdAccountReadOutput>) => {
             const account = await myClient.getAccount(input.identity)
 
-            res.send(util.userToAccount_pra(account))            
-//            if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
-//            if(account.private_display_name){res.send(util.userToAccount_rs(account))}
+                // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
+                if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
+                if(account.private_display_name){res.send(util.userToAccount_rs(account))}
 
             logger.info(`stdAccountRead read account : ${input.identity}`)
 
@@ -80,6 +74,7 @@ logger.debug('We are in index.ts')
             }
             const account = await myClient.createAccount(input.attributes)
             logger.info(account, "created user in SRA")
+            // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){res.send(util.userToAccount_rs(account))}
 
@@ -106,6 +101,7 @@ logger.debug('We are in index.ts')
 //            const account = await myClient.changeAccount(input.identity, input.changes)                
             const account = await myClient.getAccount(input.identity)                
                
+            // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){logger.info('### We DO NOT have Display Name');res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){logger.info('### We have Display Name');res.send(util.userToAccount_rs(account))}
 
@@ -115,6 +111,7 @@ logger.debug('We are in index.ts')
             logger.info(input.identity, "disabling the following account in BeyondTrust SRA")
             const account = await myClient.changeAccountStatus(input.identity, "disable")
             logger.info(input.identity, "new account after changes applied")
+            // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){res.send(util.userToAccount_rs(account))}
 
@@ -124,6 +121,7 @@ logger.debug('We are in index.ts')
             logger.info(input.identity, "enabling the following account in BeyondTrust SRA")
             const account = await myClient.changeAccountStatus(input.identity, "enable")
             logger.info(input.identity, "new account after changes applied")
+            // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){res.send(util.userToAccount_rs(account))}
 
@@ -133,6 +131,7 @@ logger.debug('We are in index.ts')
             logger.info(input.identity, "unlocking the following account in BeyondTrust SRA")
             const account = await myClient.changeAccountStatus(input.identity, "unlock")
             logger.info(input.identity, "new account after changes applied")
+            // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){res.send(util.userToAccount_rs(account))}
 
