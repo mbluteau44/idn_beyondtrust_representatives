@@ -23,7 +23,6 @@ export class Util {
                 security_provider_id: user.security_provider_id ? user.security_provider_id : null,
                 security_provider_name: user.security_provider_name ? user.security_provider_name : null,
                 public_display_name: user.public_display_name ? user.public_display_name : '',
-//                private_display_name: user.private_display_name ? user.private_display_name : '',
                 enabled: user.enabled ? user.enabled : false,
                 failed_logins: user.failed_logins ? user.failed_logins : null,
                 two_factor_required: user.two_factor_required ? user.two_factor_required : null,
@@ -73,12 +72,9 @@ export class Util {
         return {
             identity: groupId + ':' + group.name,
             uuid: groupId + ':' + group.name,
-//            identity: groupId,
-//            uuid: groupId,
             type: 'group',
             attributes: {
                 id: groupId + ':' + group.name,
-//                id: groupId,
                 name: group.name,
                 perm_share_other_team: group.perm_share_other_team,
                 perm_extended_availability_mode_allowed: group.perm_extended_availability_mode_allowed,
