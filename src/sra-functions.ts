@@ -1,5 +1,6 @@
 // BeyondTrust Secure Remote Access functions
 // Remote Support and Privileged Remote Access
+// The only difference between RS and PRA:  RS has extra attribute private_display_name
 import {
     logger
 } from '@sailpoint/connector-sdk'
@@ -108,7 +109,7 @@ export async function sra_GET_account(instance:any, token:any, id:any) {
     }
 
 // =================================================
-// GET a User id by username - NOT USED
+// GET a User id by username - NOT USED in code
 // =================================================
 export async function sra_GET_account_nameToId(instance:any, token:any, identity:any) {
 
@@ -136,14 +137,13 @@ export async function sra_GET_account_nameToId(instance:any, token:any, identity
     }
 
 // =================================================
-// GET a User Group Policy memberships
+// GET a User Group Policy memberships - Not Used in Code - Replaced by Table to avoid multiple iterations of GPs for List Accounts
 // =================================================
 export async function sra_GET_account_groups(instance:any, token:any, identity:any, GPs:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
     const arrRet = []
-//    arrRet.push("fakeGroupPolicy0")
 
     // GET Group Policies for User
     for (let indexGP = 0; indexGP < GPs.length && (indexGP) < GPs.length; ++indexGP) {
@@ -160,31 +160,26 @@ export async function sra_GET_account_groups(instance:any, token:any, identity:a
 let res = await axios(configGPmbr)
 for (let index = 0; index < res.data.length && (index) < res.data.length; ++index) {
 
-//        if(res.data[index].user_id == identity){    arrRet.push(GPs[indexGP].id+":"+GPs[indexGP].name) }
         if(res.data[index].user_id == identity){    arrRet.push(GPs[indexGP].id) }
 }
 }
  
     return arrRet
-//      return GPs.length
 
     }
 
 // =================================================
-// GET a User Group Policy memberships table
+// GET global Group Policy memberships Table
 // =================================================
 export async function sra_GET_account_groups_table(instance:any, token:any, GPs:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
 
-    // GET Security Providers
- //   let SPs = await sra_GET_security_providers(instance, token)
-
     // Iterate Group Policies
     let GPTable = []
     for (let indexGP = 0; indexGP < GPs.length && (indexGP) < GPs.length; ++indexGP) {
-  // GET GroupPolicy for member       
+  // GET GroupPolicy members       
   const configGPmbr = {
     method: 'get',
     rejectUnauthorized: false,
@@ -198,12 +193,6 @@ let GPmbrs = await axios(configGPmbr)
 for (let index = 0; index < GPmbrs.data.length && (index) < GPmbrs.data.length; ++index) {
 
       if(GPmbrs.data[index].user_id){
-//        let security_provider_name = ''
-//        for (let indexSPs = 0; indexSPs < SPs.data.length && (indexSPs) < SPs.data.length; ++indexSPs) {
-//            logger.info('indexSPs = '+indexSPs+'   SP_id = '+SPs.data[indexSPs].id+'   sp_id = '+GPmbrs.data[index].security_provider_id)
-//            if(SPs.data[indexSPs].id == GPmbrs.data[index].security_provider_id){security_provider_name = SPs.data[indexSPs].name}
-//        }
-//        logger.info('security_provider_id = '+GPmbrs.data[index].security_provider_id+'    security_provider_name = '+security_provider_name)
         GPTable.push({"GPmbrid":GPmbrs.data[index].user_id,"security_provider_id":GPmbrs.data[index].security_provider_id,"GP_id":GPs[indexGP].id,"GP_name":GPs[indexGP].name})
       }
 }
@@ -214,7 +203,7 @@ for (let index = 0; index < GPmbrs.data.length && (index) < GPmbrs.data.length; 
     }
 
 // =================================================
-// GET a User Group Policy memberships with table
+// GET a User Group Policy memberships using Table
 // =================================================
 export async function sra_GET_account_groups_with_table(identity:any, GPTable:any) {
 
@@ -288,10 +277,11 @@ export async function sra_create_account_ent(instance:any,remoteSupport:any, tok
     const axios = require('axios');
     const qs = require('querystring');
 
-    let resA = await sra_GET_account(instance,token,"1")
+    // GET first Account as a Test to tell PRA from RS(extra attribute private_display_name)
+    let resAccount = await sra_GET_account(instance,token,"1")
 
     let data = {}
-    if(!(resA.data.private_display_name)){
+    if(!(resAccount.data.private_display_name)){
     data = {
         "username": identity.username,
         "public_display_name": identity.public_display_name,
@@ -300,7 +290,7 @@ export async function sra_create_account_ent(instance:any,remoteSupport:any, tok
         "password": identity.password
     }
 }
-if(resA.data.private_display_name){
+if(resAccount.data.private_display_name){
     data = {
         "username": identity.username,
         "public_display_name": identity.public_display_name,
@@ -328,7 +318,7 @@ if(resA.data.private_display_name){
     logger.info(`res from Create Account ${JSON.stringify(res.data)}`)
     logger.info(`res.data.id from Create Account ${res.data.id.toString()}`)
 
-    // entitlements = Group Policies
+    // entitlements = Group Policies - NOT USED - using groups instead of entitlements
     let ret = {}
     if (identity.entitlementsX){
     const entSize = identity.entitlements.length
@@ -366,14 +356,8 @@ if(resA.data.private_display_name){
 
 if (identity.groups){
     logger.info('identity.groups = '+identity.groups[0])
-//    const entSize = identity.groups.length
-//    var gpid = '2'
-//    for (let Index = 0; Index < entSize; ++Index) {
-//    gpid = parseInt(identity.groups[Index].split(":")[0])
     const gpid = identity.groups[0].split(":")[0]
-//    gpid = identity.groups
     const ent = {"security_provider_id":1,"user_id":res.data.id}
-    logger.info(`sra-functions add ent done`)
 
     // set the headers
     const config_ent = {
@@ -387,8 +371,8 @@ if (identity.groups){
             'Authorization': token
         }
     };
-    let resE = await axios(config_ent)
-    logger.info(`resE for Add Entitlement: ${JSON.stringify(resE.data)}`)
+    let resEnt = await axios(config_ent)
+    logger.info(`resEnt for Add Entitlement: ${JSON.stringify(resEnt.data)}`)
     ret = {
         "id": res.data.id.toString(),
         "username": res.data.username,
@@ -409,7 +393,7 @@ if (identity.groups){
     
     }
 // =================================================
-// Create a User no entitlements
+// Create a User without entitlements - Expect IDN to send separate call for Entitlement
 // =================================================
 export async function sra_create_account(instance:any,remoteSupport:any, token:any, identity:any) {
 
@@ -454,7 +438,6 @@ if(resA.data.private_display_name){
     };
     let res = await axios(config)
     logger.info(`res from Create Account res.data`)
-//    logger.info(`res from Create Account ${JSON.stringify(res.data)}`)
     logger.info(`res.data.id from Create Account ${res.data.id.toString()}`)
 
     return res.data
@@ -462,7 +445,7 @@ if(resA.data.private_display_name){
     }
 
 // =================================================
-// Change a User 
+// Change a User Entitlements
 // =================================================
 export async function sra_change_account(instance:any, token:any, account:any, change:any) {
 
@@ -470,10 +453,8 @@ export async function sra_change_account(instance:any, token:any, account:any, c
     const qs = require('querystring');
 
     // entitlements = Group Policies    
-    //if (change.attribute == "entitlements"){
     if (change.attribute){
         const gpid = change.value.split(":")[0]
-//        const gpid = change.value
     let config_ent = {}
     let member_id = {}
 
@@ -525,7 +506,7 @@ export async function sra_change_account(instance:any, token:any, account:any, c
        }
 
 
-       let resA = await axios(config_ent)
+       let resEnt = await axios(config_ent)
 
        return {}
 
