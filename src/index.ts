@@ -148,16 +148,16 @@ export const connector = async () => {
             const groups = await myClient.getAllEntitlements()
             logger.info(groups, "fetched the following Group Policies")
             for (const group of groups) {
-                res.send(util.groupToEntitlement(group))
+            res.send(util.groupToEntitlement(group))
 }
-                logger.info(`stdEntitlementList sent ${groups.length} groups`)
-            })
+            logger.info(`stdEntitlementList sent ${groups.length} groups`)
+        })
 
-            .stdEntitlementRead(async (context: Context, input: StdEntitlementReadInput, res: Response<StdEntitlementReadOutput>) => {
+        .stdEntitlementRead(async (context: Context, input: StdEntitlementReadInput, res: Response<StdEntitlementReadOutput>) => {
                 logger.debug(input, 'entitlement read input object')
                 const group: any = await myClient.getEntitlement(input.identity)
                 logger.debug(group, 'discourse group found')
                 res.send(util.groupToEntitlement(group))
-            })
+        })
 
         }
