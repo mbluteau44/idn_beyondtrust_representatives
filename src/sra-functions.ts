@@ -61,6 +61,66 @@ return res
 }
 
 // =================================================
+// GET all Users Details
+// =================================================
+export async function sra_GET_accounts_details(instance:any, token:any) {
+
+    const axios = require('axios');
+    const qs = require('querystring');
+    
+    // set the headers
+    const config = {
+        method: 'get',
+        rejectUnauthorized: false,
+        url: instance + '/api/config/v1/user',
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': token
+        }
+    };
+    let accounts = await axios(config)
+
+    let resGP = await sra_GET_group_policies(instance,token)
+    let GPTable = await sra_GET_account_groups_table(instance,token,resGP.data)
+    logger.info('GPTable : '+JSON.stringify(GPTable))
+
+// GET Security Providers
+let SPs = await sra_GET_security_providers(instance,token)
+logger.info('SPs.data.length = '+SPs.data.length)
+
+    const ret = []
+
+    for (let index = 0; index < accounts.data.length && (index) < accounts.data.length; ++index) {
+        let GroupMemberships = await sra_GET_account_groups_with_table(accounts.data[index].id,GPTable)
+        let spname = ''
+        for (let indexSP = 0; indexSP < SPs.data.length && (indexSP) < SPs.data.length; ++indexSP) {
+            if(SPs.data[indexSP].id == accounts.data[index].security_provider_id){spname = SPs.data[indexSP].name}
+        }
+
+        let user = {}
+        user = { 
+            id: accounts.data[index].id.toString(),
+            username: accounts.data[index].username,
+            email_address: accounts.data[index].email_address,
+            enabled: accounts.data[index].enabled,
+            preferred_email_language: accounts.data[index].preferred_email_language,
+            public_display_name: accounts.data[index].public_display_name,
+            private_display_name: accounts.data[index].private_display_name,
+            failed_logins: accounts.data[index].failed_logins,
+            two_factor_required: accounts.data[index].two_factor_required,
+            security_provider_id: accounts.data[index].security_provider_id,
+            security_provider_name: spname,
+            groups: GroupMemberships
+        }
+        ret.push(user)
+    }       
+
+    
+    return ret
+    
+    }
+    
+// =================================================
 // GET Security Providers
 // =================================================
 export async function sra_GET_security_providers(instance:any, token:any) {
@@ -106,6 +166,42 @@ export async function sra_GET_account(instance:any, token:any, id:any) {
     let res = await axios(config)
     return res
     
+    }
+
+// =================================================
+// GET a User Details
+// =================================================
+export async function sra_GET_account_details(instance:any, token:any, account:any) {
+
+    const axios = require('axios');
+    const qs = require('querystring');
+    
+    let resGP = await sra_GET_group_policies(instance,token)
+    // GET Group Policy members Table
+    let GPTable = await sra_GET_account_groups_table(instance,token,resGP.data)
+    // GET Security Providers
+        let SPs = await sra_GET_security_providers(instance,token)
+        let GroupMemberships = await sra_GET_account_groups_with_table(account.id,GPTable)
+        let spname = ''
+        for (let indexSP = 0; indexSP < SPs.data.length && (indexSP) < SPs.data.length; ++indexSP) {
+            if(SPs.data[indexSP].id == account.security_provider_id){spname = SPs.data[indexSP].name}
+        }
+            
+            return { 
+                    id: account.id.toString(),
+                    username: account.username,
+                    email_address: account.email_address,
+                    enable: account.enabled,
+                    preferred_email_language: account.preferred_email_language,
+                    public_display_name: account.public_display_name,
+                    private_display_name: account.private_display_name,
+                    failed_logins: account.failed_logins,
+                    two_factor_required: account.two_factor_required,
+                    security_provider_id: account.security_provider_id,
+                    security_provider_name: spname,
+                    groups: GroupMemberships
+                }
+        
     }
 
 // =================================================
