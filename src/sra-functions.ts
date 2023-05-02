@@ -6,39 +6,80 @@ import {
 } from '@sailpoint/connector-sdk'
 
 // =================================================
-// Authentication 
+// GENERIC - Check OAuth Bearer Token expiration time
 // =================================================
-export async function sra_auth(authUrl:any, client_id:any, client_secret:any) {
+export async function check_token_expiration() {
 
-    // set the Authorization header
-let base64data = Buffer.from(client_id+':'+client_secret).toString('base64')
-const authorization = 'Basic '+base64data
-
-const axios = require('axios');
-const qs = require('querystring');
-const data = {
-    grant_type: 'client_credentials'
-};
-// set the headers
-const config = {
-    method: 'post',
-    rejectUnauthorized: false,
-    url: authUrl,
-    data: qs.stringify(data),
-    headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': authorization
+// Check EXPIRATION_TIME
+console.log('auth data before Auth = '+globalThis.__ACCESS_TOKEN)
+let now = 0
+now = Date.now();
+console.log('now Time =        '+now)
+console.log('Expiration Time = '+globalThis.__EXPIRATION_TIME)
+const time_buffer = 100
+let valid_token = 'valid'
+if(!globalThis.__EXPIRATION_TIME){
+    console.log('######### Expiration Time is undefined')
+    valid_token = 'undefined'
+}
+else{
+    if(globalThis.__EXPIRATION_TIME - time_buffer <= now){
+        console.log('Expiration Time is in the past')
+        valid_token = 'expired'
     }
-};
-let res = await axios(config)
-return res
+    else{
+        console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
+        valid_token = 'valid'
+    }
+}
+
+return valid_token
 
 }
 
+// SRA Functions
+
+// =================================================
+// Authentication Simple
+// =================================================
+export async function sra_auth() {
+
+        // set the Authorization header
+    let base64data = Buffer.from(globalThis.__CLIENT_ID+':'+globalThis.__CLIENT_SECRET).toString('base64')
+    const authorization = 'Basic '+base64data
+    
+    const axios = require('axios');
+    const qs = require('querystring');
+    const data = {
+        grant_type: 'client_credentials'
+    };
+    // set the headers
+    const config = {
+        method: 'post',
+        rejectUnauthorized: false,
+        url: globalThis.__AUTHURL,
+        data: qs.stringify(data),
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': authorization
+        }
+    };
+    let resAuth = await axios(config)
+    
+    // Store res data in Global variable
+    let now = 0
+    now = Date.now();
+    globalThis.__ACCESS_TOKEN = resAuth.data.access_token
+    globalThis.__EXPIRATION_TIME = now + (resAuth.data.expires_in * 1000)
+    
+    return resAuth
+    
+    }
+    
 // =================================================
 // GET all Users 
 // =================================================
-export async function sra_GET_accounts(instance:any, token:any) {
+export async function sra_GET_accounts(current_page: string,per_page: string) {
 
 const axios = require('axios');
 const qs = require('querystring');
@@ -47,23 +88,23 @@ const qs = require('querystring');
 const config = {
     method: 'get',
     rejectUnauthorized: false,
-    url: instance + '/api/config/v1/user',
+    url: globalThis.__INSTANCE + '/api/config/v1/user?current_page='+current_page+'&per_page='+per_page,
     headers: {
         'Accept': 'application/json',
-        'Authorization': token
+        'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
     }
 };
 let res = await axios(config)
 
-
-return res
+  //console.log('res.headers = '+res.headers)
+  return res
 
 }
 
 // =================================================
 // GET all Users Details
 // =================================================
-export async function sra_GET_accounts_details(instance:any, token:any) {
+export async function sra_GET_accounts_details() {
 
     const axios = require('axios');
     const qs = require('querystring');
@@ -72,49 +113,64 @@ export async function sra_GET_accounts_details(instance:any, token:any) {
     const config = {
         method: 'get',
         rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user',
+        url: globalThis.__INSTANCE + '/api/config/v1/user',
         headers: {
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
-    let accounts = await axios(config)
+let accounts1 = await sra_GET_accounts('1','100')
+var accounts = accounts1.data
 
-    let resGP = await sra_GET_group_policies(instance,token)
-    let GPTable = await sra_GET_account_groups_table(instance,token,resGP.data)
-    logger.info('GPTable : '+JSON.stringify(GPTable))
+    // PAGINATION BEGIN
+    //console.log('accounts.headers = '+accounts.headers)
+    const numberOfUsers = accounts1.headers['x-bt-pagination-total']
+    const currentPage = accounts1.headers['x-bt-pagination-current-page']
+    const perPage = accounts1.headers['x-bt-pagination-per-page']
+    const lastPage = accounts1.headers['x-bt-pagination-last-page']
+    console.log('Total # of Users = '+numberOfUsers+'  Last Page = '+lastPage+'  Current Page = '+currentPage+'  # per Page = '+perPage)
+    if(parseInt(lastPage) > 1){
+        for (let page = 2; page < parseInt(lastPage) + 1; ++page) {
+            console.log('PAGINATION: Last Page = '+lastPage+'   We are working on Page # '+page)
+            let accounts2 = await sra_GET_accounts(page.toString(),'100')
+            accounts = accounts.concat(accounts2.data)
+        }
+    }
+    // PAGINATION END
+    console.log('accounts = '+JSON.stringify(accounts))
+
+    let resGP = await sra_GET_group_policies()
+    let GPTable = await sra_GET_account_groups_table(resGP.data)
 
 // GET Security Providers
-let SPs = await sra_GET_security_providers(instance,token)
-logger.info('SPs.data.length = '+SPs.data.length)
+let SPs = await sra_GET_security_providers()
 
     const ret = []
 
-    for (let index = 0; index < accounts.data.length && (index) < accounts.data.length; ++index) {
-        let GroupMemberships = await sra_GET_account_groups_with_table(accounts.data[index].id,GPTable)
+    for (let index = 0; index < accounts.length && (index) < accounts.length; ++index) {
+        let GroupMemberships = await sra_GET_account_groups_with_table(accounts[index].id,GPTable)
         let spname = ''
         for (let indexSP = 0; indexSP < SPs.data.length && (indexSP) < SPs.data.length; ++indexSP) {
-            if(SPs.data[indexSP].id == accounts.data[index].security_provider_id){spname = SPs.data[indexSP].name}
+            if(SPs.data[indexSP].id == accounts[index].security_provider_id){spname = SPs.data[indexSP].name}
         }
 
         let user = {}
         user = { 
-            id: accounts.data[index].id.toString(),
-            username: accounts.data[index].username,
-            email_address: accounts.data[index].email_address,
-            enabled: accounts.data[index].enabled,
-            preferred_email_language: accounts.data[index].preferred_email_language,
-            public_display_name: accounts.data[index].public_display_name,
-            private_display_name: accounts.data[index].private_display_name,
-            failed_logins: accounts.data[index].failed_logins,
-            two_factor_required: accounts.data[index].two_factor_required,
-            security_provider_id: accounts.data[index].security_provider_id,
+            id: accounts[index].id.toString(),
+            username: accounts[index].username,
+            email_address: accounts[index].email_address,
+            enabled: accounts[index].enabled,
+            preferred_email_language: accounts[index].preferred_email_language,
+            public_display_name: accounts[index].public_display_name,
+            private_display_name: accounts[index].private_display_name,
+            failed_logins: accounts[index].failed_logins,
+            two_factor_required: accounts[index].two_factor_required,
+            security_provider_id: accounts[index].security_provider_id,
             security_provider_name: spname,
             groups: GroupMemberships
         }
         ret.push(user)
     }       
-
     
     return ret
     
@@ -123,32 +179,30 @@ logger.info('SPs.data.length = '+SPs.data.length)
 // =================================================
 // GET Security Providers
 // =================================================
-export async function sra_GET_security_providers(instance:any, token:any) {
+export async function sra_GET_security_providers() {
 
     const axios = require('axios');
     const qs = require('querystring');
 
-    const configGP = {
-        method: 'get',
-        rejectUnauthorized: false,
-        url: instance + '/api/config/v1/security-provider',
-        headers: {
-            'Accept': 'application/json',
-            'Authorization': token
+        const configGP = {
+            method: 'get',
+            rejectUnauthorized: false,
+            url: globalThis.__INSTANCE + '/api/config/v1/security-provider',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
+            }
         }
-    };
-    let resSP = await axios(configGP)
-
-
-
-    return resSP
+        console.log('sra_GET_security_providers about to call axios for resSP')
+            let resSP = await axios(configGP)
+            return resSP
 
     }
 
 // =================================================
 // GET a User 
 // =================================================
-export async function sra_GET_account(instance:any, token:any, id:any) {
+export async function sra_GET_account(id:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
@@ -157,30 +211,32 @@ export async function sra_GET_account(instance:any, token:any, id:any) {
     const config = {
         method: 'get',
         rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user/'+id,
+        url: globalThis.__INSTANCE + '/api/config/v1/user/'+id,
         headers: {
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
+    console.log('about to make request in sra_GET_account - config = '+JSON.stringify(config))
     let res = await axios(config)
-    return res
-    
+
+      return res
+
     }
 
 // =================================================
 // GET a User Details
 // =================================================
-export async function sra_GET_account_details(instance:any, token:any, account:any) {
+export async function sra_GET_account_details(account:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
     
-    let resGP = await sra_GET_group_policies(instance,token)
+    let resGP = await sra_GET_group_policies()
     // GET Group Policy members Table
-    let GPTable = await sra_GET_account_groups_table(instance,token,resGP.data)
+    let GPTable = await sra_GET_account_groups_table(resGP.data)
     // GET Security Providers
-        let SPs = await sra_GET_security_providers(instance,token)
+        let SPs = await sra_GET_security_providers()
         let GroupMemberships = await sra_GET_account_groups_with_table(account.id,GPTable)
         let spname = ''
         for (let indexSP = 0; indexSP < SPs.data.length && (indexSP) < SPs.data.length; ++indexSP) {
@@ -191,7 +247,7 @@ export async function sra_GET_account_details(instance:any, token:any, account:a
                     id: account.id.toString(),
                     username: account.username,
                     email_address: account.email_address,
-                    enable: account.enabled,
+                    enabled: account.enabled,
                     preferred_email_language: account.preferred_email_language,
                     public_display_name: account.public_display_name,
                     private_display_name: account.private_display_name,
@@ -205,69 +261,9 @@ export async function sra_GET_account_details(instance:any, token:any, account:a
     }
 
 // =================================================
-// GET a User id by username - NOT USED in code
-// =================================================
-export async function sra_GET_account_nameToId(instance:any, token:any, identity:any) {
-
-    const axios = require('axios');
-    const qs = require('querystring');
-    
-    // set the headers
-    const config = {
-        method: 'get',
-        rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user',
-        headers: {
-            'Accept': 'application/json',
-            'Authorization': token
-        }
-    };
-    let users = await axios(config)
-    let user_id = ''
-    users.data.forEach((element: { username: any; id: string; }) => {
-        if(element.username == identity){user_id = element.id}
-    })
-
-    return user_id
-    
-    }
-
-// =================================================
-// GET a User Group Policy memberships - Not Used in Code - Replaced by Table to avoid multiple iterations of GPs for List Accounts
-// =================================================
-export async function sra_GET_account_groups(instance:any, token:any, identity:any, GPs:any) {
-
-    const axios = require('axios');
-    const qs = require('querystring');
-    const arrRet = []
-
-    // GET Group Policies for User
-    for (let indexGP = 0; indexGP < GPs.length && (indexGP) < GPs.length; ++indexGP) {
-  // GET GroupPolicy for member       
-  const configGPmbr = {
-    method: 'get',
-    rejectUnauthorized: false,
-    url: instance + '/api/config/v1/group-policy/'+GPs[indexGP].id+'/member',
-    headers: {
-        'Accept': 'application/json',
-        'Authorization': token
-    }
-};
-let res = await axios(configGPmbr)
-for (let index = 0; index < res.data.length && (index) < res.data.length; ++index) {
-
-        if(res.data[index].user_id == identity){    arrRet.push(GPs[indexGP].id) }
-}
-}
- 
-    return arrRet
-
-    }
-
-// =================================================
 // GET global Group Policy memberships Table
 // =================================================
-export async function sra_GET_account_groups_table(instance:any, token:any, GPs:any) {
+export async function sra_GET_account_groups_table(GPs:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
@@ -276,16 +272,7 @@ export async function sra_GET_account_groups_table(instance:any, token:any, GPs:
     let GPTable = []
     for (let indexGP = 0; indexGP < GPs.length && (indexGP) < GPs.length; ++indexGP) {
   // GET GroupPolicy members       
-  const configGPmbr = {
-    method: 'get',
-    rejectUnauthorized: false,
-    url: instance + '/api/config/v1/group-policy/'+GPs[indexGP].id+'/member',
-    headers: {
-        'Accept': 'application/json',
-        'Authorization': token
-    }
-};
-let GPmbrs = await axios(configGPmbr)
+let GPmbrs = await sra_GET_group_policy_members(GPs[indexGP].id)
 for (let index = 0; index < GPmbrs.data.length && (index) < GPmbrs.data.length; ++index) {
 
       if(GPmbrs.data[index].user_id){
@@ -298,6 +285,27 @@ for (let index = 0; index < GPmbrs.data.length && (index) < GPmbrs.data.length; 
 
     }
 
+// =================================================
+// GET Group Policy members
+// =================================================
+export async function sra_GET_group_policy_members(id:any) {
+    const axios = require('axios');
+    const qs = require('querystring');
+
+  // GET GroupPolicy members       
+  const configGPmbr = {
+    method: 'get',
+    rejectUnauthorized: false,
+    url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+id+'/member',
+    headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
+    }
+};
+let GPmbrs = await axios(configGPmbr)
+
+  return GPmbrs
+}
 // =================================================
 // GET a User Group Policy memberships using Table
 // =================================================
@@ -322,7 +330,7 @@ export async function sra_GET_account_groups_with_table(identity:any, GPTable:an
 // =================================================
 // GET Group Policies
 // =================================================
-export async function sra_GET_group_policies(instance:any, token:any) {
+export async function sra_GET_group_policies() {
 
     const axios = require('axios');
     const qs = require('querystring');
@@ -330,21 +338,21 @@ export async function sra_GET_group_policies(instance:any, token:any) {
     const configGP = {
         method: 'get',
         rejectUnauthorized: false,
-        url: instance + '/api/config/v1/group-policy',
+        url: globalThis.__INSTANCE + '/api/config/v1/group-policy',
         headers: {
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
+    console.log('sra_GET_group_policies about to call axios for resGP')
     let resGP = await axios(configGP)
-      return resGP
-
+    return resGP
     }
 
 // =================================================
 // GET Group Policy
 // =================================================
-export async function sra_GET_group_policy(instance:any, token:any, id:any) {
+export async function sra_GET_group_policy(id:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
@@ -354,10 +362,10 @@ export async function sra_GET_group_policy(instance:any, token:any, id:any) {
     const configGP = {
         method: 'get',
         rejectUnauthorized: false,
-        url: instance + '/api/config/v1/group-policy/'+gpid,
+        url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+gpid,
         headers: {
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
     let resGP = await axios(configGP)
@@ -368,135 +376,51 @@ export async function sra_GET_group_policy(instance:any, token:any, id:any) {
 // =================================================
 // Create a User with entitlements
 // =================================================
-export async function sra_create_account_ent(instance:any,remoteSupport:any, token:any, identity:any) {
+export async function sra_create_account_ent(identity:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
 
-    // GET first Account as a Test to tell PRA from RS(extra attribute private_display_name)
-    let resAccount = await sra_GET_account(instance,token,"1")
+    let res = await sra_create_account(identity)
 
-    let data = {}
-    if(!(resAccount.data.private_display_name)){
-    data = {
-        "username": identity.username,
-        "public_display_name": identity.public_display_name,
-        "email_address": identity.email_address,
-        "enabled": true,
-        "password": identity.password
-    }
-}
-if(resAccount.data.private_display_name){
-    data = {
-        "username": identity.username,
-        "public_display_name": identity.public_display_name,
-        "private_display_name": identity.private_display_name,
-        "email_address": identity.email_address,
-        "enabled": true,
-        "password": identity.password
-    }
-}
-
-    // set the headers
-    const config = {
-        method: 'post',
-        rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user',
-        data: data,
-        headers: {
-            'Content-type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': token
-        }
-    };
-    let res = await axios(config)
-    logger.info(`res from Create Account res.data`)
-    logger.info(`res from Create Account ${JSON.stringify(res.data)}`)
-    logger.info(`res.data.id from Create Account ${res.data.id.toString()}`)
-
-    // entitlements = Group Policies - NOT USED - using groups instead of entitlements
+    // entitlements = Group Policies - using groups instead of entitlements
     let ret = {}
-    if (identity.entitlementsX){
-    const entSize = identity.entitlements.length
-    var gpid
-    for (let Index = 0; Index < entSize; ++Index) {
-    gpid = parseInt(identity.entitlements[Index].split(":")[0])
-    const ent = {"security_provider_id":1,"user_id":res.data.id}
-    logger.info(`sra-functions add ent done`)
-
-    // set the headers
-    const config_ent = {
-        method: 'post',
-        rejectUnauthorized: false,
-        url: instance + '/api/config/v1/group-policy/'+gpid+'/member',
-        data: ent,
-        headers: {
-            'Content-type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': token
-        }
-    };
-    let resA = await axios(config_ent)
-    }
-    ret = {
-        "id": res.data.id.toString(),
-        "username": identity.username,
-        "public_display_name": identity.public_display_name,
-        "email_address": identity.email_address,
-        "enabled": true,
-        "password": identity.password,
-        "groups": identity.entitlements
-    }
-}
-
 
 if (identity.groups){
     logger.info('identity.groups = '+identity.groups[0])
-    const gpid = identity.groups[0].split(":")[0]
-    const ent = {"security_provider_id":1,"user_id":res.data.id}
+  
+    const change = {"op": "Add","attribute": "groups","value": identity.groups[0]}
+    let resEnt = await sra_change_account(res.id, change)
 
-    // set the headers
-    const config_ent = {
-        method: 'post',
-        rejectUnauthorized: false,
-        url: instance + '/api/config/v1/group-policy/'+gpid+'/member',
-        data: ent,
-        headers: {
-            'Content-type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': token
-        }
-    };
-    let resEnt = await axios(config_ent)
-    logger.info(`resEnt for Add Entitlement: ${JSON.stringify(resEnt.data)}`)
+    logger.info('resEnt for Add Entitlement: '+change)
     ret = {
-        "id": res.data.id.toString(),
-        "username": res.data.username,
-        "public_display_name": res.data.public_display_name,
-        "private_display_name": res.data.private_display_name,
-        "email_address": res.data.email_address,
-        "preferred_email_language": res.data.preferred_email_language,
-        "security_provider_id": res.data.security_provider_id,
-        "two_factor_required": res.data.two_factor_required,
-        "enabled": res.data.enabled,
+        "id": res.id.toString(),
+        "username": res.username,
+        "public_display_name": res.public_display_name,
+        "private_display_name": res.private_display_name,
+        "email_address": res.email_address,
+        "preferred_email_language": res.preferred_email_language,
+        "security_provider_id": res.security_provider_id,
+        "two_factor_required": res.two_factor_required,
+        "enabled": res.enabled,
         "groups": identity.groups
     }
 }
 
 
-    logger.info(`sra-functions ret ready for return: ${ret}`)
+    logger.info('sra-functions ret ready for return: '+ret)
     return ret
     
     }
 // =================================================
 // Create a User without entitlements - Expect IDN to send separate call for Entitlement
 // =================================================
-export async function sra_create_account(instance:any,remoteSupport:any, token:any, identity:any) {
+export async function sra_create_account(identity:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
 
-    let resA = await sra_GET_account(instance,token,"1")
+    let resA = await sra_GET_account("1")
 
 
     let data = {}
@@ -524,18 +448,16 @@ if(resA.data.private_display_name){
     const config = {
         method: 'post',
         rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user',
+        url: globalThis.__INSTANCE + '/api/config/v1/user',
         data: data,
         headers: {
             'Content-type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
     let res = await axios(config)
-    logger.info(`res from Create Account res.data`)
-    logger.info(`res.data.id from Create Account ${res.data.id.toString()}`)
-
+    
     return res.data
     
     }
@@ -543,7 +465,7 @@ if(resA.data.private_display_name){
 // =================================================
 // Change a User Entitlements
 // =================================================
-export async function sra_change_account(instance:any, token:any, account:any, change:any) {
+export async function sra_change_account(account:any, change:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
@@ -560,29 +482,28 @@ export async function sra_change_account(instance:any, token:any, account:any, c
         member_id = {
             method: 'get',
             rejectUnauthorized: false,
-            url: instance + '/api/config/v1/group-policy/'+gpid+'/member',
+            url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+gpid+'/member',
             headers: {
                 'Content-type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': token
+                'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
             }
         }
         let resM = await axios(member_id)
-        let mbr_id = 0
+            let mbr_id = 0
         resM.data.forEach((element: { user_id: number; id: number; security_provider_id: number }) => {
             logger.info(`Remove Group Policy.  element.user_id = `+element.user_id+'   account = '+account)
             if(element.user_id == account){mbr_id = element.id}
         })
-        logger.info(`Remove Group Policy.  mbr_id = `+mbr_id)
         //Use mbr_id to remove User from Group Policy
         config_ent = {
             method: 'delete',
             rejectUnauthorized: false,
-            url: instance + '/api/config/v1/group-policy/'+gpid+'/member/'+mbr_id,
+            url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+gpid+'/member/'+mbr_id,
             headers: {
                 'Content-type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': token
+                'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
             }
         }
        }
@@ -591,30 +512,30 @@ export async function sra_change_account(instance:any, token:any, account:any, c
         config_ent = {
             method: 'post',
             rejectUnauthorized: false,
-            url: instance + '/api/config/v1/group-policy/'+gpid+'/member',
+            url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+gpid+'/member',
             data: {"security_provider_id":1,"user_id":parseInt(account)},
             headers: {
                 'Content-type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': token
+                'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
             }
         }
        }
 
 
        let resEnt = await axios(config_ent)
-
+ 
        return {}
 
 
-}
-    
     }
+    
+}
     
 // =================================================
 // Change a User Status
 // =================================================
-export async function sra_change_account_status(instance:any, token:any, account:any, change:any) {
+export async function sra_change_account_status(account:any, change:any) {
 
     const axios = require('axios');
     const qs = require('querystring');
@@ -625,16 +546,31 @@ if (change == "disable"){
         const status = {
             method: 'patch',
             rejectUnauthorized: false,
-            url: instance + '/api/config/v1/user/'+parseInt(account),
+            url: globalThis.__INSTANCE + '/api/config/v1/user/'+parseInt(account),
             data: {"enabled": false},
             headers: {
                 'Content-type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': token
+                'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
             }
       
     }
     let res = await axios(status)
+    .catch(function (error:any) {
+        if (error.response) {
+          console.log('error data = '+JSON.stringify(error.response.data));
+          console.log('error status = '+error.response.status);
+          console.log('error headers = '+error.response.headers);
+        }
+        if(error.response.status == 401){
+            console.log('#### error status = 401')
+            // Change expiration time to a value in the past to trigger Re-Authentication
+            globalThis.__EXPIRATION_TIME = 1682444930000
+            let resAuth = sra_auth()
+            let res2 = axios(status)
+            return res2
+        }
+      });
     return res
 }
 
@@ -643,16 +579,31 @@ if (change == "enable"){
     const status = {
         method: 'patch',
         rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user/'+parseInt(account),
+        url: globalThis.__INSTANCE + '/api/config/v1/user/'+parseInt(account),
         data: {"enabled": true},
         headers: {
             'Content-type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
   
 }
 let res = await axios(status)
+.catch(function (error:any) {
+    if (error.response) {
+      console.log('error data = '+JSON.stringify(error.response.data));
+      console.log('error status = '+error.response.status);
+      console.log('error headers = '+error.response.headers);
+    }
+    if(error.response.status == 401){
+        console.log('#### error status = 401')
+        // Change expiration time to a value in the past to trigger Re-Authentication
+        globalThis.__EXPIRATION_TIME = 1682444930000
+        let resAuth = sra_auth()
+        let res2 = axios(status)
+        return res2
+    }
+  });
 return res
 }
 
@@ -661,34 +612,47 @@ if (change == "unlock"){
     const status = {
         method: 'patch',
         rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user/'+parseInt(account),
+        url: globalThis.__INSTANCE + '/api/config/v1/user/'+parseInt(account),
         data: {"failed_logins": 0},
         headers: {
             'Content-type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
   
 }
 let res = await axios(status)
+.catch(function (error:any) {
+    if (error.response) {
+      console.log('error data = '+JSON.stringify(error.response.data));
+      console.log('error status = '+error.response.status);
+      console.log('error headers = '+error.response.headers);
+    }
+    if(error.response.status == 401){
+        console.log('#### error status = 401')
+        // Change expiration time to a value in the past to trigger Re-Authentication
+        globalThis.__EXPIRATION_TIME = 1682444930000
+        let resAuth = sra_auth()
+        let res2 = axios(status)
+        return res2
+    }
+  });
 return res
 }
 
-if (change == "delete"){
-
-    const status = {
-        method: 'delete',
-        rejectUnauthorized: false,
-        url: instance + '/api/config/v1/user/'+parseInt(account),
-        headers: {
+    if (change == "delete"){
+        const status = {
+            method: 'delete',
+            rejectUnauthorized: false,
+            url: globalThis.__INSTANCE + '/api/config/v1/user/'+parseInt(account),
+            headers: {
             'Content-type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': token
-        }
-  
-}
-let res = await axios(status)
-return res
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
+            }  
+    }
+    let res = await axios(status)
+    return res
 }
 
 }
