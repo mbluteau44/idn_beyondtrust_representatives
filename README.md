@@ -16,7 +16,8 @@
 
 
 tools/util.ts includes functions specific to either PRA or Remote Support.
-<img src="images/util.png" alt="util.ts">
+
+  <img src="images/util.png" alt="util.ts">
   
   
 
