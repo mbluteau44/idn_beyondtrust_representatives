@@ -40,6 +40,7 @@ export const connector = async () => {
     // Use the vendor SDK, or implement own client as necessary, to initialize a client
     const myClient = new MyClient(config)
 
+    try{
     return createConnector()
         .stdTestConnection(async (context: Context, input: undefined, res: Response<StdTestConnectionOutput>) => {
             logger.info("Running test connection")
@@ -54,8 +55,7 @@ export const connector = async () => {
                 if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
                 if(account.private_display_name){res.send(util.userToAccount_rs(account))}
             }
-    
-            logger.info(`stdAccountList sent ${accounts.length} accounts`)
+                logger.info(`stdAccountList sent ${accounts.length} accounts`)
         })
         .stdAccountRead(async (context: Context, input: StdAccountReadInput, res: Response<StdAccountReadOutput>) => {
             const account = await myClient.getAccount(input.identity)
@@ -159,5 +159,8 @@ export const connector = async () => {
                 logger.debug(group, 'discourse group found')
                 res.send(util.groupToEntitlement(group))
         })
+    } catch (err:any) {
+        throw new ConnectorError(err.name+'  ::  '+err.message)
+    }
 
         }
