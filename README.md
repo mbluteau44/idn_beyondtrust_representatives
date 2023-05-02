@@ -53,6 +53,24 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
   
   <img src="images/function-userDetails.png" alt="sra-functions.ts">
   
+  <p>Load Testing 8-2000 users</p>
+
+  Test data was used to test Aggregation for up to 2000 users in SRA.  Each user is a member of 1 of 3 Group Policies.
   
+  <img src="images/Aggregation_Time.png" alt="Aggregation Time">
+
+  <img src="images/AccountsAggregation-15.png" alt="15 users">
+  
+  <img src="images/AccountsAggregation-102.png" alt="102 users">
+  
+  <img src="images/AccountsAggregation-500-1.png" alt="500 users">
+  
+  <img src="images/AccountsAggregation-1000-1.png" alt="1000 users">
+
+  
+  <img src="images/AccountsAggregation-2000-1.png" alt="2000 users">
+
+
+
 </body>
 </html>
