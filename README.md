@@ -2,10 +2,49 @@
 <html>
 <body>
 
-<h1># idn_beyondtrust_representatives</h1>
+<h1>SailPoint IdentityNow SaaS Connector SDK :: BeyondTrust Representatives</h1>
 
-<p>SailPoint IdentityNow SaaS Connector SDK - Remote Support and Privileged Remote Access</p>
+<h2>Remote Support and Privileged Remote Access</h2>
+  
+  The BeyondTrust Representatives connector has been created using the <a href="https://developer.sailpoint.com/idn/docs/saas-connectivity/">SailPoint IdentityNow SaaS Connector SDK</a>.
+  
+  Remote Support and Privileged Remote Access both include Representatives and the only difference between the 2 products is that Remote Support has an extra mandatory attribute:  private_display_name.  Below is a User in Privileged Remote Access. 
+  
+   <img src="images/sra-User.png" alt="SRA User">
+  
+  Group Policies are used as Groups with the Connector.
+  
+   <img src="images/sra-GroupPolicy.png" alt="SRA Group Policy">
 
+   <img src="images/sra-GroupPolicy-2.png" alt="SRA Group Policy">
+  
+  An API service account needs to be created for the Connector.
+  
+   <img src="images/sra-api-config.png" alt="SRA API User configuration">
+  
+  The API documentation is available via the Management API section.
+  
+   <img src="images/sra-api-user.png" alt="SRA API User documentation">
+  
+  Connector Configuration in IdentityNow.
+  
+   <img src="images/idn-Config.png" alt="SRA Accounts in IdentityNow">
+  
+   SRA Accounts in IdentityNow.
+  
+   <img src="images/idn-Accounts.png" alt="SRA Accounts in IdentityNow">
+
+  SRA Entitlements in IdentityNow.
+  
+   <img src="images/idn-Entitlements.png" alt="SRA Entitlements in IdentityNow">
+ 
+  Representatives Connector - Create Account(provisioning policy) in IdentityNow.
+  
+   <img src="images/idn-CreateAccount.png" alt="Create Account in IdentityNow">
+  
+
+<h2>Code structure overview</h2>
+  
   The BeyondTrust Representatives connector capabilities are managed within connector-spec.json.
 
   <img src="images/connector-spec.png" alt="connector-spec.json">
@@ -53,7 +92,7 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
   
   <img src="images/function-userDetails.png" alt="sra-functions.ts">
   
-  <p>Load Testing 8-2000 users</p>
+  <h2>Load Testing 8-2000 users</h2>
 
   Test data was used to test Aggregation for up to 2000 users in SRA.  Each user is a member of 1 of 3 Group Policies.
   
@@ -70,7 +109,16 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
   
   <img src="images/AccountsAggregation-2000-1.png" alt="2000 users">
 
+<h2>Error handling</h2>
+  
+  Invalid host in Configuration:  Test Connection.
+  
+   <img src="images/Error-TestConnection-HostNotFound.png" alt="Host Not Found">
 
+  Invalid credentials in Configuration:  Test Connection.
+  
+   <img src="images/Error-TestConnection-InvalidCredentials.png" alt="Invalid Credentials">
+  
 
 </body>
 </html>
