@@ -119,6 +119,17 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
   
    <img src="images/Error-TestConnection-InvalidCredentials.png" alt="Invalid Credentials">
   
+  Invalid non-expired Bearer Token.
+  
+  This condition is created by changing the Configuration to point to a different instance(requires 2 RS/PRA instances).
+  The Connector logic first checks the expiration time, and assumes that the Bearer Token is still valid, so it attemps a call(e.g. GET User) 
+  but the  call fails with Unauthorized 401 error.  The Connector handles this error condition by discarding the Bearer Token 
+  and forcing re-authentication.
+  
+  Switching back and forth between instances and using Test Connection(within Configuration) should result in Success.
+  
+   <img src="images/ErrorHandling-testConnection-Success.png" alt="Invalidating Bearer Token">
+
 
 </body>
 </html>
