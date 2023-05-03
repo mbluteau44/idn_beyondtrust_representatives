@@ -21,7 +21,11 @@
   An API service account needs to be created for the Connector.
   
    <img src="images/sra-api-config.png" alt="SRA API User configuration">
+
+  API service account permissions.
   
+   <img src="images/sra-api-account-permissions.png" alt="SRA API User configuration">
+
   The API documentation is available via the Management API section.
   
    <img src="images/sra-api-user.png" alt="SRA API User documentation">
