@@ -115,25 +115,44 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
 
 <h2>Error handling</h2>
   
-  Invalid host in Configuration:  Test Connection.
+  <h3>Invalid host in Configuration:  Test Connection.</h3>
   
    <img src="images/Error-TestConnection-HostNotFound.png" alt="Host Not Found">
+   
+   But with Smart Error Handling function, we can present a more informative error message to the user:
+   
+   <img src="images/smartError-HostNotFound.png" alt="Host Not Found: Smart Error Handling">  
 
-  Invalid credentials in Configuration:  Test Connection.
+  <h3>Invalid credentials in Configuration:  Test Connection.</h3>
   
    <img src="images/Error-TestConnection-InvalidCredentials.png" alt="Invalid Credentials">
-  
-  Invalid non-expired Bearer Token.
+   
+   But with Smart Error Handling, we are presenting this message:
+   
+    <img src="images/smartErrot-401.png" alt="Invalid Credentials: Smart Error Handling">
+ 
+  <h3>Invalid non-expired Bearer Token.</h3>
   
   This condition is created by changing the Configuration to point to a different instance(requires 2 RS/PRA instances).
   The Connector logic first checks the expiration time, and assumes that the Bearer Token is still valid, so it attemps a call(e.g. GET User) 
   but the  call fails with Unauthorized 401 error.  The Connector handles this error condition by discarding the Bearer Token 
   and forcing re-authentication.
   
-  Switching back and forth between instances and using Test Connection(within Configuration) should result in Success.
+  Switching back and forth between instances and using Test Connection(within Configuration) should result in Success, because the Error condition is catched and handled by code.
   
    <img src="images/ErrorHandling-testConnection-Success.png" alt="Invalidating Bearer Token">
 
+  <h3>Invalid URL path</h3>
+  
+  This can be created when the host portion of the URL is valid, but not the path.
+ 
+   <img src="images/smartErrot-404.png" alt="Invalid URL path: Smart Error Handling">
+
+  <h3>Missing permission in Source for API Account</h3>
+  
+  This can be created by a lack of permission in Source.
+ 
+   <img src="images/smartErrot-403.png" alt="Missing permissions in source: Smart Error Handling">
 
 </body>
 </html>
