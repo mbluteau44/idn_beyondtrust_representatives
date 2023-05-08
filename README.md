@@ -154,5 +154,12 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
  
    <img src="images/smartError-403.png" alt="Missing permissions in source - Smart Error Handling">
 
+  <h3>Trailing slash character in either instance or authentication URL</h3>
+  
+  Logic included in my-client.ts to remove trailing character to avoid error 405.
+  
+  <img src="images/error-trailingSlash.png" alt="Code to remove trailing slash">
+
+  
 </body>
 </html>
