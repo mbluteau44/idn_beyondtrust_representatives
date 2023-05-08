@@ -121,7 +121,7 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
    
    But with Smart Error Handling function, we can present a more informative error message to the user:
    
-   <img src="images/smartError-HostNotFound.png" alt="Host Not Found: Smart Error Handling">  
+   <img src="images/smartError-HostNotFound.png" alt="Host Not Found - Smart Error Handling">  
 
   <h3>Invalid credentials in Configuration:  Test Connection.</h3>
   
@@ -146,13 +146,13 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
   
   This can be created when the host portion of the URL is valid, but not the path.
  
-   <img src="images/smartError-404.png" alt="Invalid URL path: Smart Error Handling">
+   <img src="images/smartError-404.png" alt="Invalid URL path - Smart Error Handling">
 
   <h3>Missing permission in Source for API Account</h3>
   
   This can be created by a lack of permission in Source.
  
-   <img src="images/smartError-403.png" alt="Missing permissions in source: Smart Error Handling">
+   <img src="images/smartError-403.png" alt="Missing permissions in source - Smart Error Handling">
 
 </body>
 </html>
