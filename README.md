@@ -127,9 +127,9 @@ We also need to catch Unauthorized 401 error, which means the Bearer Token we ha
   
    <img src="images/Error-TestConnection-InvalidCredentials.png" alt="Invalid Credentials">
    
-   But with Smart Error Handling, we are presenting this message:
-   
-    <img src="images/smartError-401.png" alt="Invalid credentials - Smart Error Handling">
+   But with Smart Error Handling, we are presenting a more informative message.
+  
+   <img src="images/smartError-401.png" alt="Invalid credentials - Smart Error Handling">
  
   <h3>Invalid non-expired Bearer Token.</h3>
   
