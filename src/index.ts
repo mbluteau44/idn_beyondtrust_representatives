@@ -37,9 +37,11 @@ export const connector = async () => {
 
     const util = new Util();
 
-    // Use the vendor SDK, or implement own client as necessary, to initialize a client
+    // Use the configuration API for Remote Support and Privileged Remote Access, to initialize a client
     const myClient = new MyClient(config)
 
+    //  We use a try catch block here, to trap any error that would happen at the index level.
+    //    Error handling should prevent errors at the index level.
     try{
     return createConnector()
         .stdTestConnection(async (context: Context, input: undefined, res: Response<StdTestConnectionOutput>) => {
@@ -83,7 +85,6 @@ export const connector = async () => {
         .stdAccountUpdate(async (context: Context, input: StdAccountUpdateInput, res: Response<StdAccountUpdateOutput>) => {
             logger.info(input, "getting account using input")
             logger.info(input.identity, "changing the following account in BeyondTrust SRA")
-//            throw new ConnectorError('85 Unknown account change op: ' + JSON.stringify(input))
 
             input.changes.forEach((c: { op: string }) => {
                 switch (c.op) {
@@ -110,7 +111,7 @@ export const connector = async () => {
         .stdAccountDisable(async (context: Context, input: StdAccountDisableInput, res: Response<StdAccountDisableOutput>) => {
             logger.info(input.identity, "disabling the following account in BeyondTrust SRA")
             const account = await myClient.changeAccountStatus(input.identity, "disable")
-            logger.info(input.identity, "new account after changes applied")
+            logger.info(input.identity, "account after changes applied")
             // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){res.send(util.userToAccount_rs(account))}
@@ -120,7 +121,7 @@ export const connector = async () => {
         .stdAccountEnable(async (context: Context, input: StdAccountEnableInput, res: Response<StdAccountEnableOutput>) => {
             logger.info(input.identity, "enabling the following account in BeyondTrust SRA")
             const account = await myClient.changeAccountStatus(input.identity, "enable")
-            logger.info(input.identity, "new account after changes applied")
+            logger.info(input.identity, "account after changes applied")
             // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){res.send(util.userToAccount_rs(account))}
@@ -130,7 +131,7 @@ export const connector = async () => {
         .stdAccountUnlock(async (context: Context, input: StdAccountUnlockInput, res: Response<StdAccountUnlockOutput>) => {
             logger.info(input.identity, "unlocking the following account in BeyondTrust SRA")
             const account = await myClient.changeAccountStatus(input.identity, "unlock")
-            logger.info(input.identity, "new account after changes applied")
+            logger.info(input.identity, "account after changes applied")
             // Here we need to know whether the instance is PRA or Remote Support(add private_display_name)
             if(!(account.private_display_name)){res.send(util.userToAccount_pra(account))}
             if(account.private_display_name){res.send(util.userToAccount_rs(account))}
@@ -140,7 +141,7 @@ export const connector = async () => {
         .stdAccountDelete(async (context: Context, input: StdAccountDeleteInput, res: Response<StdAccountDeleteOutput>) => {
             logger.info(input.identity, "deleting the following account in BeyondTrust SRA")
             const account = await myClient.changeAccountStatus(input.identity, "delete")
-            logger.info(input.identity, "new account after changes applied")
+            logger.info(input.identity, "account after changes applied")
 //            res.send(account.toStdAccountDisableOutput())
         })
 
@@ -160,7 +161,7 @@ export const connector = async () => {
                 res.send(util.groupToEntitlement(group))
         })
     } catch (err:any) {
-        throw new ConnectorError(err.name+'  ::  '+err.message)
+        throw new ConnectorError(err.name+'  :index:  '+err.message)
     }
 
         }
