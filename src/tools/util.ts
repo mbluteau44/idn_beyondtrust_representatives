@@ -62,7 +62,7 @@ export class Util {
 
 
     /**
-     * converts group object to IDN Entitlement List Output
+     * converts Group Policy object to IDN Entitlement List Output
      *
      * @param {Group} group group object
      * @returns {StdAccountCreateOutput} IDN Entitlement List Output
