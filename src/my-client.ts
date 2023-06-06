@@ -1,5 +1,5 @@
 import { ConnectorError, logger } from "@sailpoint/connector-sdk"
-import {sra_auth, sra_GET_accounts, sra_GET_account, sra_GET_group_policies,sra_create_account,sra_change_account,sra_change_account_status,sra_create_account_ent,sra_GET_account_groups_table,sra_GET_account_groups_with_table,sra_GET_security_providers,sra_GET_group_policy,sra_GET_account_details,sra_GET_accounts_details,check_token_expiration} from './sra-functions'
+import {sra_auth, sra_GET_accounts, sra_GET_account, sra_GET_group_policies,sra_create_account,sra_change_account,sra_change_account_status,sra_create_account_ent,sra_GET_account_groups_table,sra_GET_account_groups_with_table,sra_GET_security_providers,sra_GET_group_policy,sra_GET_account_details,sra_GET_accounts_details,check_token_expiration,smart_error_handling} from './sra-functions'
 
 
 export class MyClient {
@@ -7,19 +7,23 @@ export class MyClient {
     private readonly authUrl?: string
     private readonly client_id?: string
     private readonly client_secret?: string
-//    private readonly token?: string
-//    private readonly identity?: string
 
     constructor(config: any) {
         // Fetch necessary properties from config.
-        // Following properties actually do not exist in the config -- it just serves as an example.
-        this.instance = config?.instance
-        this.authUrl = config?.authUrl
-        this.client_id = config?.client_id
-        this.client_secret = config?.client_secret
-        //Global Variables
-        globalThis.__INSTANCE = config?.instance
-        globalThis.__AUTHURL = config?.authUrl
+        // Global Variables
+        // Remove trailing slash in URL if present.  Then store in Global Variables.
+        if(config?.instance.substr(config?.instance.length - 1 ) == '/'){
+            globalThis.__INSTANCE = config?.instance.substr(0,config?.instance.length - 1)
+        }  else{
+            globalThis.__INSTANCE = config?.instance
+        }
+        // Remove trailing slash in Auth URL if present.  Then store in Global Variables.
+        if(config?.authUrl.substr(config?.authUrl.length - 1 ) == '/'){
+            globalThis.__AUTHURL = config?.authUrl.substr(0,config?.authUrl.length - 1)
+        }  else{
+            globalThis.__AUTHURL = config?.authUrl
+        }
+        // Store Client Credentials in Global Variables
         globalThis.__CLIENT_ID = config?.client_id
         globalThis.__CLIENT_SECRET = config?.client_secret
     }
@@ -31,35 +35,34 @@ export class MyClient {
         if((valid_token == 'undefined') || (valid_token == 'expired')){
             console.log('######### Expiration Time is undefined or in the past')
             let resAuth = await sra_auth()
-            logger.info(`resAuth : ${JSON.stringify(resAuth.data)}`)
                 }
         else if(valid_token == 'valid'){
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
-            // Declare account
-            let accounts: any[] = []
+            // GET accounts with details
             try{
                 let resAccounts = await sra_GET_accounts_details()
-                accounts = resAccounts
+                return resAccounts
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
                 if(err.message == 'Request failed with status code 401'){
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
-                    logger.info(`resAuth2 : ${JSON.stringify(resAuth2.data)}`)
                     let resAccounts2 = await sra_GET_accounts_details()
-                    accounts = resAccounts2
-                    }
-            }  finally{
-                    return accounts
-                    }
+                    return resAccounts2
+                }    else{
+                    console.log('about to throw ConnectorError')
+                    await smart_error_handling(err)
+                    return err.message
+                }
 
-    }
+            }  
+            }
 
     async getAccount(identity: string): Promise<any> {
-        // In a real use case, this requires a HTTP call out to SaaS app to fetch an account,
+        // GET account with details
         // which is why it's good practice for this to be async and return a promise.
 
         // Check expiration time for Bearer token in Global variable
@@ -72,24 +75,26 @@ export class MyClient {
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
-            // Declare account
-            let account = {}
+            // GET account
             try{
                 let resAccount = await sra_GET_account(identity)
-                account = resAccount.data
-            }  catch (err:any) {
+                let resAccountDetails = await sra_GET_account_details(resAccount.data)
+                return resAccountDetails
+        }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
                 if(err.message == 'Request failed with status code 401'){
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
                     let resAccount2 = await sra_GET_account(identity)
-                    account = resAccount2.data
-                    }   else{throw new ConnectorError(err.name+'  ::  '+err.message)}
-            }  finally{
-                    let resAccount = await sra_GET_account_details(account)
-                    return resAccount
+                    let resAccountDetails = await sra_GET_account_details(resAccount2.data)
+                    return resAccountDetails
+                }   else{
+                        console.log('about to throw ConnectorError')
+                        await smart_error_handling(err)
+                        return err.message
                     }
+            }  
 
     }
 
@@ -102,32 +107,30 @@ export class MyClient {
         if((valid_token == 'undefined') || (valid_token == 'expired')){
             console.log('######### Expiration Time is undefined or in the past')
             let resAuth = await sra_auth()
-            logger.info(`resAuth : ${JSON.stringify(resAuth.data)}`)
                 }
         else if(valid_token == 'valid'){
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
             // Declare account
-            let addAccount = {}
             try{
                 let resAccount = await sra_create_account_ent(account)
-                addAccount = resAccount
+                return resAccount
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
                 if(err.message == 'Request failed with status code 401'){
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
-                    logger.info(`resAuth2 : ${JSON.stringify(resAuth2.data)}`)
                     let resAccounts2 = await sra_create_account_ent(account)
-                    addAccount = resAccounts2
-                    }
-            }  finally{
-                //let resAccount = await sra_GET_account_details(createAccount)
-                return addAccount
-                    }
+                    return resAccounts2
+                }   else{
+                    console.log('about to throw ConnectorError')
+                    await smart_error_handling(err)
+                    return err.message
+                }
 
+            } 
     }
 
     async changeAccount(account: string, change: any): Promise<any> {
@@ -139,29 +142,32 @@ export class MyClient {
         if((valid_token == 'undefined') || (valid_token == 'expired')){
             console.log('######### Expiration Time is undefined or in the past')
             let resAuth = await sra_auth()
-            logger.info(`resAuth : ${JSON.stringify(resAuth.data)}`)
                 }
         else if(valid_token == 'valid'){
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
-            // Declare account
+            // Change account
             try{
                 let changeAccount = await sra_change_account(account,change)
+                let getAccount = await sra_GET_account(account)
+                return getAccount.data
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
                 if(err.message == 'Request failed with status code 401'){
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
-                    logger.info(`resAuth2 : ${JSON.stringify(resAuth2.data)}`)
                     let changeAccount2 = await sra_change_account(account,change)
+                    let getAccount2 = await sra_GET_account(account)
+                    return getAccount2.data
+                }     else{
+                        console.log('about to throw ConnectorError')
+                        await smart_error_handling(err)
+                        return err.message
                     }
-            }  finally{
-                let getAccount = await sra_GET_account(account)
-                let resAccount = await sra_GET_account_details(getAccount.data)
-                return resAccount
-                        }
+
+            }  
     }
 
     async changeAccountStatus(account: string, change: any): Promise<any> {
@@ -173,30 +179,34 @@ export class MyClient {
         if((valid_token == 'undefined') || (valid_token == 'expired')){
             console.log('######### Expiration Time is undefined or in the past')
             let resAuth = await sra_auth()
-            logger.info(`resAuth : ${JSON.stringify(resAuth.data)}`)
                 }
         else if(valid_token == 'valid'){
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
-            // Declare account
+            // Change account
             try{
                 let changeAccount = await sra_change_account_status(account,change)
+                let getAccount = await sra_GET_account(account)
+                let resAccount = await sra_GET_account_details(getAccount.data)
+                return resAccount
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
                 if(err.message == 'Request failed with status code 401'){
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
-                    logger.info(`resAuth2 : ${JSON.stringify(resAuth2.data)}`)
                     let changeAccount2 = await sra_change_account_status(account,change)
+                    let getAccount2 = await sra_GET_account(account)
+                    let resAccount2 = await sra_GET_account_details(getAccount2.data)
+                    return resAccount2
+                }    else{
+                        console.log('about to throw ConnectorError')
+                        await smart_error_handling(err)
+                        return err.message
                     }
-            }  finally{
-                let getAccount = await sra_GET_account(account)
-                let resAccount = await sra_GET_account_details(getAccount.data)
-                return resAccount
-                        }
 
+                } 
     }
 
     async testConnection(): Promise<any> {
@@ -206,28 +216,30 @@ export class MyClient {
         if((valid_token == 'undefined') || (valid_token == 'expired')){
             console.log('######### Expiration Time is undefined or in the past')
             let resAuth = await sra_auth()
-            logger.info(`resAuth : ${JSON.stringify(resAuth.data)}`)
                 }
         else if(valid_token == 'valid'){
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
-        // TEST = GET Security Providers
+        // TEST = GET Security Providers.  This is an arbitrary choice.
         try{
         let SPs = await sra_GET_security_providers()
         logger.info(`Service Providers : ${JSON.stringify(SPs.data)}`)
+        return {}
     } catch (err:any) {
         console.log('##### Error name = '+err.name)
         console.log('##### Error message = '+err.message)
         if(err.message == 'Request failed with status code 401'){
             console.log('#### error status = 401')
             let resAuth2: any = await sra_auth()
-            logger.info(`resAuth2 : ${JSON.stringify(resAuth2.data)}`)
             let SPs2 = await sra_GET_security_providers()
-        }   else{throw new ConnectorError(err.name+'  ::  '+err.message)}
-    }  finally{
-        return {}
+            return {}
+        }   else{
+            console.log('We are about to throw ConnectorError in Test Connection')
+            await smart_error_handling(err)
+            return err.message
         }
+    }
     }
 
     async getAllEntitlements(): Promise<any[]> {
@@ -236,17 +248,15 @@ export class MyClient {
         if((valid_token == 'undefined') || (valid_token == 'expired')){
             console.log('######### Expiration Time is undefined or in the past')
             let resAuth = await sra_auth()
-            logger.info(`resAuth : ${JSON.stringify(resAuth.data)}`)
                 }
         else if(valid_token == 'valid'){
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
-            // Declare entitlements
-            let entitlements: any[] = []
+            // GET entitlements
             try{
                 let resGP = await sra_GET_group_policies()
-                entitlements = resGP.data
+                return resGP.data
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
@@ -254,12 +264,13 @@ export class MyClient {
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
                     let resGP2 = await sra_GET_group_policies()
-                    entitlements = resGP2.data
+                    return resGP2.data
+                    }    else{
+                    console.log('about to throw ConnectorError')
+                    await smart_error_handling(err)
+                    return err.message
                 }
-            }  finally{
-                return entitlements
-                        }
-
+            }
     }
 
     async getEntitlement(identity: string): Promise<any[]> {
@@ -268,30 +279,30 @@ export class MyClient {
         if((valid_token == 'undefined') || (valid_token == 'expired')){
             console.log('######### Expiration Time is undefined or in the past')
             let resAuth = await sra_auth()
-            logger.info(`resAuth : ${JSON.stringify(resAuth.data)}`)
                 }
         else if(valid_token == 'valid'){
             console.log('### Expiration Time is in the future:  No need to Re-Authenticate')
             }
 
-            // Declare entitlement
-            let entitlement:any = {}
+            // GET entitlement
             try{
                 let resGP = await sra_GET_group_policy(identity)
-                entitlement = resGP.data
+                return resGP.data
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
                 if(err.message == 'Request failed with status code 401'){
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
-                    logger.info(`resAuth2 : ${JSON.stringify(resAuth2.data)}`)
                     let resGP2 = await sra_GET_group_policy(identity)
-                    entitlement = resGP2.data
+                    return resGP2.data
+                    }     else{
+                    console.log('about to throw ConnectorError')
+                    await smart_error_handling(err)
+                    return err.message
                 }
-            }  finally{
-                return entitlement
-                        }
+
+            }  
 
     }
 
