@@ -21,7 +21,7 @@
 				{
 					"type": "section",
 					"sectionTitle": "Authentication",
-					"sectionHelpMessage": "Provide connection parameters to interact securely with the target application.",
+					"sectionHelpMessage": "Provide connection parameters to interact securely with the target instance.",
 					"items": [
 						{
 							"key": "instance",
@@ -263,7 +263,7 @@
 				"initialValue": {
 					"type": "static",
 					"attributes": {
-						"value": "BtDev2022*"
+						"value": "BtDev2023*"
 					}
 				},
 				"attributes": {},
