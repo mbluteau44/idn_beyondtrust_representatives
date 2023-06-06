@@ -2,8 +2,8 @@
  * Required configuration parameters.
  */
  export class Config {
-    apiKey?: string 
-    apiUsername?: string 
-    baseUrl?: string
-    primaryGroup?: string 
+   instance?: string 
+   authUrl?: string 
+   client_id?: string
+   client_secret?: string 
  }
