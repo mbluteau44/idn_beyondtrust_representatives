@@ -22,7 +22,7 @@
   
    <img src="images/sra-api-config.png" alt="SRA API User configuration">
 
-  API service account permissions.
+  API service account permissions.  Allow Access for the Configuration API is required by the Connector.
   
    <img src="images/sra-api-account-permissions.png" alt="SRA API User configuration">
 
