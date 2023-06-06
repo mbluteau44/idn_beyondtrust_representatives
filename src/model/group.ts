@@ -1,5 +1,5 @@
 /**
- * Group is Discourse's representation of a group, omitting the properties we don't need.
+ * Group Policy is Remote Support and Privileged Remote Access representation of a group, omitting the properties we don't need.
  */
  export class Group {
     id = ''
