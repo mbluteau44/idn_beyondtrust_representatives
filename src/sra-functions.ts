@@ -1,9 +1,7 @@
 // BeyondTrust Secure Remote Access functions
-// Remote Support and Privileged Remote Access
-// The only difference between RS and PRA:  RS has extra attribute private_display_name
-import {
-    logger
-} from '@sailpoint/connector-sdk'
+// Products:  Remote Support and Privileged Remote Access
+// The only difference between RS and PRA:  RS has extra user attribute: private_display_name
+import { ConnectorError, logger } from '@sailpoint/connector-sdk'
 
 // =================================================
 // GENERIC - Check OAuth Bearer Token expiration time
@@ -37,6 +35,28 @@ return valid_token
 
 }
 
+// =================================================
+// GENERIC - Smart Error Handling
+// =================================================
+export async function smart_error_handling(err: any) {
+    //  This function is for replacing Axios generic errors with product specific errors messages and toubleshooting suggestions.
+
+    console.log('############ We are in smart_error handling, error name = '+err.name+'    Error Message = '+err.message)
+    // Smart Error Handling
+    if(err.message.substr(0,21) == 'getaddrinfo ENOTFOUND'){
+        throw new ConnectorError(err.message+'  ::  Verify the Source instance portion of the URL in Configuration')
+    }   else if(err.message == 'Request failed with status code 401'){
+        throw new ConnectorError(err.message+'  ::  Verify that the Source API account client_id and client_secret are valid in Configuration')
+}   else if(err.message == 'Request failed with status code 403'){
+            throw new ConnectorError(err.message+'  ::  Verify that the Source API account has required permissions.  Permission for BeyondTrust is: Allow access for Configuration API')
+}   else if(err.message == 'Request failed with status code 404'){
+            throw new ConnectorError(err.message+'  ::  Source instance responded, but there is a problem with the URL in Configuration')
+    }    else{
+        console.log('about to throw ConnectorError')
+        throw new ConnectorError(err.name+'  ::  '+err.message)
+    }
+    }
+    
 // SRA Functions
 
 // =================================================
@@ -64,15 +84,17 @@ export async function sra_auth() {
             'Authorization': authorization
         }
     };
-    let resAuth = await axios(config)
-    
-    // Store res data in Global variable
-    let now = 0
-    now = Date.now();
-    globalThis.__ACCESS_TOKEN = resAuth.data.access_token
-    globalThis.__EXPIRATION_TIME = now + (resAuth.data.expires_in * 1000)
-    
-    return resAuth
+    try{
+        let resAuth = await axios(config)
+        // Store session token in Global variable so it is available for other functions
+        let now = 0
+        now = Date.now();
+        globalThis.__ACCESS_TOKEN = resAuth.data.access_token
+        globalThis.__EXPIRATION_TIME = now + (resAuth.data.expires_in * 1000)    
+        return resAuth
+    }   catch (err:any) {
+        await smart_error_handling(err)
+    }
     
     }
     
@@ -96,7 +118,6 @@ const config = {
 };
 let res = await axios(config)
 
-  //console.log('res.headers = '+res.headers)
   return res
 
 }
@@ -123,7 +144,6 @@ let accounts1 = await sra_GET_accounts('1','100')
 var accounts = accounts1.data
 
     // PAGINATION BEGIN
-    //console.log('accounts.headers = '+accounts.headers)
     const numberOfUsers = accounts1.headers['x-bt-pagination-total']
     const currentPage = accounts1.headers['x-bt-pagination-current-page']
     const perPage = accounts1.headers['x-bt-pagination-per-page']
@@ -193,7 +213,6 @@ export async function sra_GET_security_providers() {
                 'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
             }
         }
-        console.log('sra_GET_security_providers about to call axios for resSP')
             let resSP = await axios(configGP)
             return resSP
 
@@ -217,7 +236,6 @@ export async function sra_GET_account(id:any) {
             'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
-    console.log('about to make request in sra_GET_account - config = '+JSON.stringify(config))
     let res = await axios(config)
 
       return res
@@ -408,12 +426,11 @@ if (identity.groups){
 }
 
 
-    logger.info('sra-functions ret ready for return: '+ret)
     return ret
     
     }
 // =================================================
-// Create a User without entitlements - Expect IDN to send separate call for Entitlement
+// Create a User without entitlements - Expect IDN to send separate call for Entitlements
 // =================================================
 export async function sra_create_account(identity:any) {
 
