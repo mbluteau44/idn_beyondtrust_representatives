@@ -1,5 +1,5 @@
 import { ConnectorError, logger } from "@sailpoint/connector-sdk"
-import {sra_auth, sra_GET_accounts, sra_GET_account, sra_GET_group_policies,sra_create_account,sra_change_account,sra_change_account_status,sra_create_account_ent,sra_GET_account_groups_table,sra_GET_account_groups_with_table,sra_GET_security_providers,sra_GET_group_policy,sra_GET_account_details,sra_GET_accounts_details,check_token_expiration,smart_error_handling} from './sra-functions'
+import {sra_auth, sra_GET_account, sra_GET_group_policies,sra_create_account,sra_change_account,sra_change_account_status,sra_create_account_ent,sra_GET_account_groups_table,sra_GET_account_groups_with_table,sra_GET_security_providers,sra_GET_group_policy,sra_GET_account_details,sra_GET_accounts_details,check_token_expiration,smart_error_handling} from './sra-functions'
 
 
 export class MyClient {
@@ -256,7 +256,7 @@ export class MyClient {
             // GET entitlements
             try{
                 let resGP = await sra_GET_group_policies()
-                return resGP.data
+                return resGP
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
@@ -264,7 +264,7 @@ export class MyClient {
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
                     let resGP2 = await sra_GET_group_policies()
-                    return resGP2.data
+                    return resGP2
                     }    else{
                     console.log('about to throw ConnectorError')
                     await smart_error_handling(err)
@@ -307,3 +307,4 @@ export class MyClient {
     }
 
 }
+
