@@ -287,7 +287,7 @@ export class MyClient {
             // GET entitlement
             try{
                 let resGP = await sra_GET_group_policy(identity)
-                return resGP.data
+                return resGP
             }  catch (err:any) {
                 console.log('##### Error name = '+err.name)
                 console.log('##### Error message = '+err.message)
@@ -295,7 +295,7 @@ export class MyClient {
                     console.log('#### error status = 401')
                     let resAuth2: any = await sra_auth()
                     let resGP2 = await sra_GET_group_policy(identity)
-                    return resGP2.data
+                    return resGP2
                     }     else{
                     console.log('about to throw ConnectorError')
                     await smart_error_handling(err)
