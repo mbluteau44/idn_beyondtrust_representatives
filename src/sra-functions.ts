@@ -101,9 +101,9 @@ export async function sra_auth() {
     }
     
 // =================================================
-// GET all Users 
+// GET all Users with PAGINATION 
 // =================================================
-export async function sra_GET_accounts(current_page: string,per_page: string) {
+export async function sra_GET_accounts_pagination(current_page: string,per_page: string) {
 
 const axios = require('axios');
 const qs = require('querystring');
@@ -142,7 +142,7 @@ export async function sra_GET_accounts_details() {
             'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
-let accounts1 = await sra_GET_accounts('1','100')
+let accounts1 = await sra_GET_accounts_pagination('1','100')
 var accounts = accounts1.data
 
     // PAGINATION BEGIN
@@ -154,7 +154,7 @@ var accounts = accounts1.data
     if(parseInt(lastPage) > 1){
         for (let page = 2; page < parseInt(lastPage) + 1; ++page) {
             console.log('PAGINATION: Last Page = '+lastPage+'   We are working on Page # '+page)
-            let accounts2 = await sra_GET_accounts(page.toString(),'100')
+            let accounts2 = await sra_GET_accounts_pagination(page.toString(),'100')
             accounts = accounts.concat(accounts2.data)
         }
     }
@@ -162,7 +162,7 @@ var accounts = accounts1.data
     console.log('accounts = '+JSON.stringify(accounts))
 
     let resGP = await sra_GET_group_policies()
-    let GPTable = await sra_GET_account_groups_table(resGP.data)
+    let GPTable = await sra_GET_account_groups_table(resGP)
 
 // GET Security Providers
 let SPs = await sra_GET_security_providers()
@@ -254,7 +254,7 @@ export async function sra_GET_account_details(account:any) {
     
     let resGP = await sra_GET_group_policies()
     // GET Group Policy members Table
-    let GPTable = await sra_GET_account_groups_table(resGP.data)
+    let GPTable = await sra_GET_account_groups_table(resGP)
     // GET Security Providers
         let SPs = await sra_GET_security_providers()
         let GroupMemberships = await sra_GET_account_groups_with_table(account.id,GPTable)
@@ -348,6 +348,31 @@ export async function sra_GET_account_groups_with_table(identity:any, GPTable:an
     }
 
 // =================================================
+// GET all Group Policies with PAGINATION 
+// =================================================
+export async function sra_GET_group_policies_pagination(current_page: string,per_page: string) {
+
+    const axios = require('axios');
+    const qs = require('querystring');
+    
+    // set the headers
+    const config = {
+        method: 'get',
+        rejectUnauthorized: false,
+        url: globalThis.__INSTANCE + '/api/config/v1/group-policy?current_page='+current_page+'&per_page='+per_page,
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
+        }
+    };
+    let res = await axios(config)
+    
+      return res
+    
+    }
+    
+    
+// =================================================
 // GET Group Policies
 // =================================================
 export async function sra_GET_group_policies() {
@@ -363,10 +388,30 @@ export async function sra_GET_group_policies() {
             'Accept': 'application/json',
             'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
-    };
-    console.log('sra_GET_group_policies about to call axios for resGP')
-    let resGP = await axios(configGP)
-    return resGP
+    };    
+
+    let gp1 = await sra_GET_group_policies_pagination('1','100')
+    var gp = gp1.data
+    
+        // PAGINATION BEGIN
+        const numberOfGPs = gp1.headers['x-bt-pagination-total']
+        const currentPage = gp1.headers['x-bt-pagination-current-page']
+        const perPage = gp1.headers['x-bt-pagination-per-page']
+        const lastPage = gp1.headers['x-bt-pagination-last-page']
+        console.log('Total # of Group Policies = '+numberOfGPs+'  Last Page = '+lastPage+'  Current Page = '+currentPage+'  # per Page = '+perPage)
+        if(parseInt(lastPage) > 1){
+            for (let page = 2; page < parseInt(lastPage) + 1; ++page) {
+                console.log('PAGINATION: Last Page = '+lastPage+'   We are working on Page # '+page)
+                let gp2 = await sra_GET_group_policies_pagination(page.toString(),'100')
+                gp = gp.concat(gp2.data)
+            }
+        }
+        // PAGINATION END
+        console.log('Group Policies = '+JSON.stringify(gp))
+    
+
+//    let resGP = await axios(configGP)
+    return gp
     }
 
 // =================================================
