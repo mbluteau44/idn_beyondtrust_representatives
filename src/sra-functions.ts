@@ -49,6 +49,8 @@ export async function smart_error_handling(err: any) {
         throw new ConnectorError(err.message+'  ::  Verify that the Source API account client_id and client_secret are valid in Configuration')
 }   else if(err.message == 'Request failed with status code 403'){
             throw new ConnectorError(err.message+'  ::  Verify that the Source API account has required permissions.  Permission for BeyondTrust is: Allow access for Configuration API')
+}   else if(err.message == 'This API cannot update administrators.'){
+            throw new ConnectorError(err.message+'  ::  Verify that the account is not an administrator. Administrators cannot be disabled etc.')
 }   else if(err.message == 'Request failed with status code 404'){
             throw new ConnectorError(err.message+'  ::  Source instance responded, but there is a problem with the URL in Configuration')
     }    else{
@@ -368,7 +370,7 @@ export async function sra_GET_group_policies() {
     }
 
 // =================================================
-// GET Group Policy
+// GET Group Policy - /group-policy/{id} works for PRA but not for RS, so we use name filter instead
 // =================================================
 export async function sra_GET_group_policy(id:any) {
 
@@ -376,18 +378,22 @@ export async function sra_GET_group_policy(id:any) {
     const qs = require('querystring');
 
     const gpid = id.split(":")[0]
+    const gpname = id.split(":")[1]
+    console.log('###  GET Group Policy id = '+gpid+'  name = '+gpname)
 
     const configGP = {
         method: 'get',
         rejectUnauthorized: false,
-        url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+gpid,
+//        url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+gpid,
+        url: globalThis.__INSTANCE + '/api/config/v1/group-policy?name='+gpname,
         headers: {
             'Accept': 'application/json',
             'Authorization': 'Bearer '+globalThis.__ACCESS_TOKEN
         }
     };
     let resGP = await axios(configGP)
-      return resGP
+    console.log('##### GET Group Policy = '+JSON.stringify(resGP.data[0]))
+    return resGP.data[0]
 
     }
     
