@@ -157,7 +157,7 @@ export const connector = async () => {
         .stdEntitlementRead(async (context: Context, input: StdEntitlementReadInput, res: Response<StdEntitlementReadOutput>) => {
                 logger.debug(input, 'entitlement read input object')
                 const group: any = await myClient.getEntitlement(input.identity)
-                logger.debug(group, 'discourse group found')
+                logger.debug(group, 'SRA  group found')
                 res.send(util.groupToEntitlement(group))
         })
     } catch (err:any) {
