@@ -48,7 +48,7 @@ export const connector = async () => {
             logger.info("Running test connection")
             res.send(await myClient.testConnection())
         })
-        .stdAccountList(async (context: Context, input: undefined, res: Response<StdAccountListOutput>) => {
+        .stdAccountList(async (context: Context, input: any, res: Response<StdAccountListOutput>) => {
 
             const accounts = await myClient.getAllAccounts()
             
