@@ -577,11 +577,12 @@ export async function sra_change_account(account:any, change:any) {
        }
     //Add User to Group Policy
     if (change.op == "Add" || change.op == "add"){
+        let resAccount = await sra_GET_account(account)
         config_ent = {
             method: 'post',
             rejectUnauthorized: false,
             url: globalThis.__INSTANCE + '/api/config/v1/group-policy/'+gpid+'/member',
-            data: {"security_provider_id":1,"user_id":parseInt(account)},
+            data: {"security_provider_id":resAccount.data.security_provider_id,"user_id":parseInt(account)},
             headers: {
                 'Content-type': 'application/json',
                 'Accept': 'application/json',
