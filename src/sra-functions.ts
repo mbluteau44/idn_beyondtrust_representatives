@@ -456,12 +456,19 @@ export async function sra_create_account_ent(identity:any) {
     let ret = {}
 
 if (identity.groups){
-    logger.info('identity.groups = '+identity.groups[0])
-  
-    const change = {"op": "Add","attribute": "groups","value": identity.groups[0]}
+    logger.info('identity.groups = '+JSON.stringify(identity.groups))
+    if(Array.isArray(identity.groups)){  // For multiple Group values, IDN submits identity.groups as Array
+        for (const group of identity.groups) {
+            const change = {"op": "Add","attribute": "groups","value": group}
+            let resEnt = await sra_change_account(res.id, change)
+            logger.info('resEnt for Add Entitlement: '+JSON.stringify(change))
+        }
+} else {  // For a single Group value, IDN submits identity.groups as String
+    const change = {"op": "Add","attribute": "groups","value": identity.groups}
     let resEnt = await sra_change_account(res.id, change)
+    logger.info('resEnt for Add Entitlement: '+JSON.stringify(change))
 
-    logger.info('resEnt for Add Entitlement: '+change)
+}
     ret = {
         "id": res.id.toString(),
         "username": res.username,
@@ -475,7 +482,20 @@ if (identity.groups){
         "groups": identity.groups
     }
 }
+else {
+    ret = {
+        "id": res.id.toString(),
+        "username": res.username,
+        "public_display_name": res.public_display_name,
+        "private_display_name": res.private_display_name,
+        "email_address": res.email_address,
+        "preferred_email_language": res.preferred_email_language,
+        "security_provider_id": res.security_provider_id,
+        "two_factor_required": res.two_factor_required,
+        "enabled": res.enabled
+    }
 
+}
 
     return ret
     
